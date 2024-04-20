@@ -8,68 +8,97 @@ from langchain.chains.conversation.memory import ConversationBufferWindowMemory
 from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
 
+# Get Groq API key
+groq_api_key = os.environ['GROQ_API_KEY']
 
-def main():
-    """
-    This function is the main entry point of the application. It sets up the Groq client, the Streamlit interface, and handles the chat interaction.
-    """
-    
-    # Get Groq API key
-    groq_api_key = os.environ['GROQ_API_KEY']
+def survey_page():
+    st.title("Investment Survey")
 
+    # Investment amount question
+    investment_amount = st.radio("What is the expected amount you want to spend on investment?", 
+                                  ['$10-100', '$100-1000', '$1000-10000', '$10000+'])
+
+    # Age question
+    age = st.slider("What is your age?", 18, 100)
+
+    # Investment goals question
+    investment_goals = st.multiselect("What are your investment goals?", 
+                                      ["Retirement", "Buying a house", "Generating passive income", "Education", "Other"])
+
+    # Risk tolerance question
+    risk_tolerance = st.radio("How comfortable are you with the possibility of losing money on your investments?", 
+                              ["Not comfortable at all", "Slightly comfortable", "Moderately comfortable", "Very comfortable"])
+
+    # Investment knowledge question
+    investment_knowledge = st.select_slider("How would you rate your investment knowledge?", 
+                                            options=["Novice", "Intermediate", "Advanced"])
+
+    # Investment experience question
+    investment_experience = st.radio("Do you have any previous experience with investing?", 
+                                      ["Yes", "No"])
+
+    return investment_amount, age, investment_goals, risk_tolerance, investment_knowledge, investment_experience
+
+
+def chat_page(investment_amount, age, investment_goals, risk_tolerance, investment_knowledge, investment_experience):
     # Display the Groq logo
-    spacer, col = st.columns([5, 1])  
-    with col:  
-        st.image('groqcloud_darkmode.png')
+    st.image('bread2.png',width=700, use_column_width=True)
 
-    # The title and greeting message of the Streamlit application
-    st.title("Chat with Groq!")
-    st.write("Hello! I'm your friendly Groq chatbot. I can help answer your questions, provide information, or just chat. I'm also super fast! Let's start our conversation!")
+
+    st.title("Chat with Mal!")
+    st.write("Hello! I'm your friendly investment assistant. Ask me anything about investing and I'll do my best to help you out.")
 
     # Add customization options to the sidebar
-    st.sidebar.title('Customization')
-    model = st.sidebar.selectbox(
-        'Choose a model',
-        ['mixtral-8x7b-32768', 'llama2-70b-4096']
-    )
-    conversational_memory_length = st.sidebar.slider('Conversational memory length:', 1, 10, value = 5)
+    model ='mixtral-8x7b-32768'
+    conversational_memory_length = 5
 
-    memory=ConversationBufferWindowMemory(k=conversational_memory_length)
-
-    user_question = st.text_input("Ask a question:")
+    memory = ConversationBufferWindowMemory(k=conversational_memory_length)
+    inp = st.text_input("Ask a question:")
+    user_question = f'''You are an amazing stock market expert here to help me with getting started with investing from zero experience\
+    I have a few questions to ask you. Some background information to help maximize advice: my age is {age}, the amount I'd like to invest\
+    is {investment_amount}, my promary goal for investment: (other for not sure) {investment_goals}, I am a {investment_knowledge} investor\
+    Do I have any experience? {investment_experience}. I am also {risk_tolerance} with taking risks.\
+    your main goal is to talk to me about the stock market specifically, talk about things like investment best practices, safe companies\
+    to start investing in, some websites that I can use to get started, and some general tips for beginners.''' + inp
 
     # session state variable
     if 'chat_history' not in st.session_state:
-        st.session_state.chat_history=[]
+        st.session_state.chat_history = []
     else:
         for message in st.session_state.chat_history:
-            memory.save_context({'input':message['human']},{'output':message['AI']})
-
+            memory.save_context({'input': message['human']}, {'output': message['AI']})
 
     # Initialize Groq Langchain chat object and conversation
-    groq_chat = ChatGroq(
-            groq_api_key=groq_api_key, 
-            model_name=model
-    )
-
-    conversation = ConversationChain(
-            llm=groq_chat,
-            memory=memory
-    )
+    groq_chat = ChatGroq(groq_api_key=groq_api_key, model_name=model)
+    conversation = ConversationChain(llm=groq_chat, memory=memory)
 
     # If the user has asked a question,
-    if user_question:
-        
+    if inp:
         # The chatbot's answer is generated by sending the full prompt to the Groq API.
         response = conversation(user_question)
-        message = {'human':user_question,'AI':response['response']}
+        message = {'human': user_question, 'AI': response['response']}
         st.session_state.chat_history.append(message)
         st.write("Chatbot:", response['response'])
 
+def main():
+    # Initialize the reload count
+    if 'survey_completed' not in st.session_state:
+        st.session_state.survey_completed = False
+    if 'reload_count' not in st.session_state:
+        st.session_state.reload_count = 0
+    print(f"Survey: {st.session_state.survey_completed}, Reload: {st.session_state.reload_count}")
+    # Increment the reload count
+    st.session_state.reload_count += 1
+    investment_amount, age, investment_goals, risk_tolerance, investment_knowledge, investment_experience = None, None, None, None, None, None
+
+    if st.session_state.reload_count == 1 or not st.session_state.survey_completed:
+        investment_amount, age, investment_goals, risk_tolerance, investment_knowledge, investment_experience = survey_page()
+        st.session_state.survey_completed = False
+    # Next button to navigate to the chat page
+    if st.session_state.survey_completed or st.button("Next"):
+        st.session_state.survey_completed = True
+        chat_page(investment_amount, age, investment_goals, risk_tolerance, investment_knowledge, investment_experience)
+
+
 if __name__ == "__main__":
     main()
-
-
-
-
-
