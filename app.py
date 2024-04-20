@@ -2,14 +2,15 @@ import streamlit as st
 import os
 from groq import Groq
 import random
-
+import dotenv
+load_dotenv()
 from langchain.chains import ConversationChain
 from langchain.chains.conversation.memory import ConversationBufferWindowMemory
 from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
 
 # Get Groq API key
-groq_api_key = os.environ['GROQ_API_KEY']
+groq_api_key = os.get_env('GROQ_API_KEY')
 
 def survey_page():
     st.title("Investment Survey")
