@@ -8,7 +8,7 @@ from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
 
 # Get Groq API key
-groq_api_key = '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'
+groq_api_key = None
 
 def survey_page():
     st.title("Investment Survey")
